@@ -32,10 +32,14 @@
         <button v-if="!item.update" @click="update(item)">更新</button>
         <div v-else>
           <h4>更新</h4>
-          <div v-for="lang in languages">
-          {{lang}} : <textarea v-model="item.update[lang]" @input="input(item)"></textarea>
+          <div v-for="locale in languages">
+          {{locale}} : <textarea v-model="item.update[locale]" @input="input(item)"
+            @focus="recommend(locale, item.lang)"></textarea>
           </div>
           <button @click="cancel(item)">取消</button>
+          <div>
+            <button class="word" v-if="item.lang === recommendLang" v-for="word in recommends" @click="dorecommend(word, item)">⌨{{word}}</button>
+          </div>
         </div>
       </li>
     </ul>
@@ -87,6 +91,11 @@ let editorStorage = {
 
 let data = editorStorage.fetch()
 
+/**
+ * 获取配置文件中涉及的语言
+ *
+ * @param yaml 配置信息
+ */
 function getLanguages (yaml) {
   let result = []
   yaml.forEach((file) => {
@@ -102,6 +111,34 @@ function getLanguages (yaml) {
   return result
 }
 
+/**
+ * 获取词条推荐的翻译
+ *
+ * @param yaml 配置信息
+ * @param lang 词条
+ * @param locale 当前语言
+ */
+function getRecommend (yaml, locale, lang) {
+  let result = []
+  let keys = Object.keys(lang).filter((key) => {
+    return key !== 'todo' && key !== '*' && key !== locale
+  })
+
+  yaml.forEach((file) => {
+    file.i18n.forEach((item) => {
+      keys.forEach((key) => {
+        if (item.lang[locale] && lang[key] === item.lang[key] && result.indexOf(item.lang[locale]) < 0) {
+          result.push(item.lang[locale])
+        }
+        if (item.update && item.update[locale] && lang[key] === item.update[key] && result.indexOf(item.update[locale]) < 0) {
+          result.push(item.update[locale])
+        }
+      })
+    })
+  })
+  return result
+}
+
 export default {
   name: 'editor',
   data () {
@@ -109,7 +146,10 @@ export default {
       yaml: data.yaml,
       selected: data.yaml[data.selected],
       filename: data.filename,
-      languages: getLanguages(data.yaml)
+      languages: getLanguages(data.yaml),
+      recommends: [],
+      recommendLang: null,
+      recommendLocale: null
     }
   },
   filters: {
@@ -184,6 +224,18 @@ export default {
         })
       }
       input.click()
+    },
+    recommend (locale, lang) {
+      if (locale && lang) {
+        this.recommends = getRecommend(this.yaml, locale, lang)
+      }
+      this.recommendLang = lang
+      this.recommendLocale = locale
+    },
+    dorecommend (word, item) {
+      console.log(word, item, this.recommendLocale)
+      item.update[this.recommendLocale] = word
+      Vue.set(this.selected.i18n, this.selected.i18n.indexOf(item), item)
     }
   },
   created () {
@@ -228,6 +280,14 @@ button {
 	padding: 6px 24px;
 	text-decoration: none;
 	text-shadow: 0px 1px 0px #ffffff;
+
+  &.word {
+    margin: 5px 5px 5px 0;
+    padding: 2px;
+    ️&::before {
+      content: '⌨️';
+    }
+  }
 }
 
 button:hover {
