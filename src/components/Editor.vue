@@ -21,22 +21,19 @@
       <li v-if="selected">{{selected.file}}</li>
       <li v-if="!selected">无数据</li>
       <li v-else v-for="item in selected.i18n">
-        <div v-for="(text, lang) in item.lang">
-          <label v-if="lang === 'todo'" :class="{ todo: !item.update }">
+        <div v-for="key in Object.keys(item.lang).sort()">
+          <label v-if="key === 'todo'" :class="{ todo: !item.update }">
           {{ !item.update ? '待处理' : '已处理' }}
           </label>
           <label v-else>
-          {{lang}} : {{text}}
+          {{key}} : {{item.lang[key]}}
           </label>
         </div>
         <button v-if="!item.update" @click="update(item)">更新</button>
         <div v-else>
           <h4>更新</h4>
-          <div>
-          cn : <textarea v-model="item.update.cn" @input="input(item)"></textarea>
-          </div>
-          <div>
-          en : <textarea v-model="item.update.en" @input="input(item)"></textarea>
+          <div v-for="lang in languages">
+          {{lang}} : <textarea v-model="item.update[lang]" @input="input(item)"></textarea>
           </div>
           <button @click="cancel(item)">取消</button>
         </div>
@@ -90,16 +87,35 @@ let editorStorage = {
 
 let data = editorStorage.fetch()
 
+function getLanguages (yaml) {
+  let result = []
+  yaml.forEach((file) => {
+    file.i18n.forEach((item) => {
+      Object.keys(item.lang).forEach((key) => {
+        if (key !== 'todo' && key !== '*' && result.indexOf(key) < 0) {
+          result.push(key)
+        }
+      })
+    })
+  })
+  result.sort()
+  return result
+}
+
 export default {
   name: 'editor',
   data () {
     return {
       yaml: data.yaml,
       selected: data.yaml[data.selected],
-      filename: data.filename
+      filename: data.filename,
+      languages: getLanguages(data.yaml)
     }
   },
   filters: {
+    sort (arr) {
+      return arr.sort()
+    },
     todos (value) {
       if (!value.i18n) {
         return 0
@@ -133,10 +149,11 @@ export default {
       this.save()
     },
     update (item) {
-      item.update = {
-        cn: item.lang.cn,
-        en: item.lang.en
-      }
+      let data = {}
+      this.languages.forEach((lang) => {
+        data[lang] = item.lang[lang]
+      })
+      item.update = data
       Vue.set(this.selected.i18n, this.selected.i18n.indexOf(item), item)
       this.save()
     },
