@@ -7,15 +7,23 @@
         <button @click="saveas">保存</button>
         <label>{{filename}}</label>
       </div>
-      <ul>
-        <li v-if="yaml.length <= 0">无数据</li>
-        <li v-else v-for="item in yaml" @click="select(item)" :class="{ selected: item === selected }">
+      <ul v-if="yaml.length">
+        <li @click="select(queryList)" >
+          <span class="red">{{queryList | todos}}</span>
+          <span class="green">{{queryList | updates}}</span>
+          <span>{{queryList | counter}}</span>
+          <input type="text" v-model="query" placeholder="筛选">
+        </li>
+        <li v-for="item in yaml" @click="select(item)" :class="{ selected: item === selected }">
           <span class="red">{{item | todos}}</span>
           <span class="green">{{item | updates}}</span>
           <span>{{item | counter}}</span>
           {{item.file}}
         </li>
       </ul>
+      <div v-else>
+        无数据
+      </div>
     </div>
     <ul class="dictionary">
       <li v-if="selected">{{selected.file}}</li>
@@ -111,6 +119,21 @@ function getLanguages (yaml) {
   return result
 }
 
+function getQueryList (yaml, query) {
+  let result = []
+  yaml.forEach((file) => {
+    file.i18n.forEach((item) => {
+      Object.keys(item.lang).some((key) => {
+        if (item.lang[key] && String(item.lang[key]).indexOf(query || '') >= 0) {
+          result.push(item)
+          return true
+        }
+      })
+    })
+  })
+  return result
+}
+
 /**
  * 获取词条推荐的翻译
  *
@@ -139,14 +162,21 @@ function getRecommend (yaml, locale, lang) {
   return result
 }
 
+let queryList = {
+  file: '[query]' + data.query,
+  i18n: getQueryList(data.yaml, data.query)
+}
+
 export default {
   name: 'editor',
   data () {
     return {
       yaml: data.yaml,
-      selected: data.yaml[data.selected],
+      selected: data.selected === -2 ? queryList : data.yaml[data.selected],
       filename: data.filename,
       languages: getLanguages(data.yaml),
+      queryList: queryList,
+      query: '',
       recommends: [],
       recommendLang: null,
       recommendLocale: null
@@ -207,10 +237,17 @@ export default {
       FileSaver.saveAs(blob, this.filename || 'i18n.yaml')
     },
     save () {
+      let index
+      if (queryList === this.selected) {
+        index = -2
+      } else {
+        index = this.yaml.indexOf(this.selected)
+      }
       editorStorage.save({
         yaml: this.yaml,
-        selected: this.yaml.indexOf(this.selected),
-        filename: this.filename
+        selected: index,
+        filename: this.filename,
+        query: this.query
       })
     },
     open () {
@@ -252,8 +289,14 @@ export default {
     }
     document.addEventListener('drop', dropHandler)
     document.addEventListener('dragover', dragoverHandler)
+  },
+  watch: {
+    query () {
+      queryList.file = '[query]' + this.query
+      queryList.i18n = getQueryList(this.yaml, this.query)
+      this.save()
+    }
   }
-
 }
 </script>
 
@@ -327,6 +370,9 @@ li {
   }
   .green {
     color: green;
+  }
+  input[type="text"] {
+    width: 55%;
   }
 }
 
