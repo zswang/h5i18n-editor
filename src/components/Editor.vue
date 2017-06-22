@@ -233,7 +233,6 @@ export default {
       this.recommendLocale = locale
     },
     dorecommend (word, item) {
-      console.log(word, item, this.recommendLocale)
       item.update[this.recommendLocale] = word
       Vue.set(this.selected.i18n, this.selected.i18n.indexOf(item), item)
     }
