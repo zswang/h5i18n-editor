@@ -14,7 +14,7 @@
           <span>{{queryList | counter}}</span>
           <input type="text" v-model="query" placeholder="筛选">
         </li>
-        <li v-for="item in yaml" @click="select(item)" :class="{ selected: item === selected }">
+        <li v-for="item in yaml" :key="item" @click="select(item)" :class="{ selected: item === selected }">
           <span class="red">{{item | todos}}</span>
           <span class="green">{{item | updates}}</span>
           <span>{{item | counter}}</span>
@@ -28,8 +28,8 @@
     <ul class="dictionary">
       <li v-if="selected">{{selected.file}}</li>
       <li v-if="!selected">无数据</li>
-      <li v-else v-for="item in selected.i18n">
-        <div v-for="key in Object.keys(item.lang).sort()">
+      <li v-else v-for="item in selected.i18n" :key="item">
+        <div v-for="key in Object.keys(item.lang).sort()" :key="key">
           <label v-if="key === 'todo'" :class="{ todo: !item.update }">
           {{ !item.update ? '待处理' : '已处理' }}
           </label>
@@ -40,13 +40,13 @@
         <button v-if="!item.update" @click="update(item)">更新</button>
         <div v-else>
           <h4>更新</h4>
-          <div v-for="locale in languages">
+          <div v-for="locale in languages" :key="locale">
           {{locale}} : <textarea v-model="item.update[locale]" @input="input(item)"
             @focus="recommend(locale, item.lang)"></textarea>
           </div>
           <button @click="cancel(item)">取消</button>
-          <div>
-            <button class="word" v-if="item.lang === recommendLang" v-for="word in recommends" @click="dorecommend(word, item)">⌨{{word}}</button>
+          <div v-if="item.lang === recommendLang">
+            <button class="word" v-for="word in recommends" @click="dorecommend(word, item)" :key="word">⌨{{word}}</button>
           </div>
         </div>
       </li>
@@ -99,6 +99,26 @@ let editorStorage = {
 
 let data = editorStorage.fetch()
 
+function compare (a, b) {
+  if (('todo' in a.lang) && !('todo' in b.lang)) {
+    return -1
+  }
+
+  if (!('todo' in a.lang) && ('todo' in b.lang)) {
+    return 1
+  }
+
+  if (a.update && !b.update) {
+    return 1
+  }
+
+  if (!a.update && b.update) {
+    return -1
+  }
+
+  return 0
+}
+
 /**
  * 获取配置文件中涉及的语言
  *
@@ -107,6 +127,8 @@ let data = editorStorage.fetch()
 function getLanguages (yaml) {
   let result = []
   yaml.forEach((file) => {
+    file.i18n.sort(compare)
+
     file.i18n.forEach((item) => {
       Object.keys(item.lang).forEach((key) => {
         if (key !== 'todo' && key !== '*' && result.indexOf(key) < 0) {
@@ -131,7 +153,7 @@ function getQueryList (yaml, query) {
       })
     })
   })
-  return result
+  return result.sort(compare)
 }
 
 /**
@@ -257,6 +279,7 @@ export default {
           this.yaml = yaml
           this.selected = yaml[0]
           this.filename = filename
+          this.languages = getLanguages(this.yaml)
           this.save()
         })
       }
@@ -281,6 +304,7 @@ export default {
         this.yaml = yaml
         this.selected = yaml[0]
         this.filename = filename
+        this.languages = getLanguages(this.yaml)
         this.save()
       })
     }
