@@ -1,10 +1,17 @@
 <template>
   <div class="editor">
+    <div v-if="sourceVisible" class="source">
+      <div>
+        <button @click="toggleSource">隐藏</button>
+      </div>
+      <textarea class="yaml"></textarea>
+    </div>
     <input type="file" accept=".yaml">
     <div class="files">
       <div>
         <button @click="open">打开</button>
         <button @click="saveas">保存</button>
+        <button @click="toggleSource">数据</button>
         <label>{{filename}}</label>
       </div>
       <ul v-if="yaml.length">
@@ -193,6 +200,7 @@ export default {
   name: 'editor',
   data () {
     return {
+      sourceVisible: false,
       yaml: data.yaml,
       selected: data.selected === -2 ? queryList : data.yaml[data.selected],
       filename: data.filename,
@@ -257,6 +265,14 @@ export default {
     saveas () {
       var blob = new Blob([yaml.safeDump(this.yaml)], {type: 'text/plain; charset=utf-8'})
       FileSaver.saveAs(blob, this.filename || 'i18n.yaml')
+    },
+    toggleSource () {
+      this.sourceVisible = !this.sourceVisible
+      setTimeout(() => {
+        if (this.sourceVisible) {
+          document.querySelector('textarea.yaml').value = yaml.safeDump(this.yaml)
+        }
+      }, 100)
     },
     save () {
       let index
@@ -403,6 +419,20 @@ li {
 .editor {
   input[type="file"] {
     display: none;
+  }
+
+  .source {
+    left: 50%;
+    transform: translate(-50%, 0);
+    position: fixed;
+    height: 500px;
+    width: 80%;
+    background: white;
+    border-radius: 5px;
+    textarea.yaml {
+      width: 100%;
+      height: 100%;
+    }
   }
 }
 
