@@ -296,6 +296,7 @@ export default {
           this.selected = yaml[0]
           this.filename = filename
           this.languages = getLanguages(this.yaml)
+          queryList.i18n = getQueryList(this.yaml, this.query)
           this.save()
         })
       }
@@ -321,6 +322,7 @@ export default {
         this.selected = yaml[0]
         this.filename = filename
         this.languages = getLanguages(this.yaml)
+        queryList.i18n = getQueryList(this.yaml, this.query)
         this.save()
       })
     }
